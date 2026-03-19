@@ -278,11 +278,11 @@
 
         // Handle nickname submission
         nicknameInput.addEventListener('keypress', (e) => {
+        nicknameInput.addEventListener("blur", setNickname);
             if (e.key === 'Enter') {
                 setNickname();
             }
         });
-
         function setNickname() {
             const nickname = nicknameInput.value.trim();
             if (nickname) {
@@ -292,6 +292,12 @@
                 socket.emit('set nickname', nickname);
                 sendButton.disabled = false;
                 messageInput.focus();
+                nicknameInput.removeEventListener('blur', setNickname); // Remove blur listener after setting
+            } else {
+                nicknameInput.focus();
+                nicknameInput.placeholder = 'Please enter a nickname';
+            }
+        }
             }
         }
 
