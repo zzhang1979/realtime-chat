@@ -5,82 +5,356 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Realtime Chat App</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
         }
-        #messages {
-            height: 400px;
-            border: 1px solid #ccc;
-            overflow-y: scroll;
-            padding: 10px;
-            margin-bottom: 20px;
-            background-color: #f9f9f9;
-        }
-        #form {
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
             display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+        
+        .header {
+            background-color: #4a90e2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .stats {
+            opacity: 0.9;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             gap: 10px;
         }
-        #input {
-            flex: 1;
-            padding: 10px;
-            font-size: 16px;
+        
+        .message {
+            max-width: 80%;
+            word-wrap: break-word;
         }
-        #submit {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
+        
+        .message-sent {
+            align-self: flex-end;
+            background-color: #4a90e2;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px 18px 4px 18px;
+        }
+        
+        .message-received {
+            align-self: flex-start;
+            background-color: #e9ecef;
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 18px 18px 18px 4px;
+        }
+        
+        .message-nickname {
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .message-text {
+            margin-bottom: 4px;
+        }
+        
+        .message-timestamp {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            text-align: right;
+        }
+        
+        .system-message {
+            align-self: center;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-style: italic;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .input-area {
+            display: flex;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #eee;
+            gap: 10px;
+        }
+        
+        #nickname-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #nickname-input:focus {
+            border-color: #4a90e2;
+        }
+        
+        #message-input {
+            flex: 2;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #message-input:focus {
+            border-color: #4a90e2;
+        }
+        
+        #send-button {
+            flex: 0 0 auto;
+            padding: 12px 24px;
+            background-color: #4a90e2;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 25px;
+            font-size: 1rem;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        #submit:hover {
-            background-color: #0056b3;
+        
+        #send-button:hover:not(:disabled) {
+            background-color: #357ab8;
         }
-        .message {
-            margin: 10px 0;
-            padding: 8px;
-            background-color: #e9ecef;
-            border-radius: 4px;
+        
+        #send-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
-        .message.user {
-            background-color: #d1ecf1;
-            text-align: right;
+        
+        .placeholder-text {
+            color: #999;
+            font-style: italic;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                height: 100vh;
+            }
+            
+            .input-area {
+                flex-wrap: wrap;
+            }
+            
+            #nickname-input,
+            #message-input {
+                flex: 1 1 100%;
+                margin-bottom: 10px;
+            }
+            
+            #send-button {
+                flex: 1 1 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Realtime Chat App</h1>
-    <div id="messages"></div>
-    <form id="form" action="">
-        <input id="input" autocomplete="off" /><button id="submit">Send</button>
-    </form>
+    <div class="container">
+        <div class="header">
+            <h1>Realtime Chat App</h1>
+            <div class="stats" id="stats">Connecting...</div>
+        </div>
+        
+        <div class="chat-box" id="chatBox"></div>
+        
+        <div class="input-area">
+            <input type="text" id="nickname-input" placeholder="Enter your nickname" autocomplete="off" />
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
+            <button id="send-button" disabled>Send</button>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const form = document.getElementById('form');
-        const input = document.getElementById('input');
-        const messages = document.getElementById('messages');
+        const nicknameInput = document.getElementById('nickname-input');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatBox = document.getElementById('chatBox');
+        const statsElement = document.getElementById('stats');
+        
+        let currentNickname = '';
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (input.value) {
-                socket.emit('chat message', input.value);
-                input.value = '';
+        // Update UI based on connection status
+        function updateStats(userCount, nickname = '') {
+            if (nickname) {
+                statsElement.textContent = `Online: ${userCount} users • You: ${nickname}`;
+            } else {
+                statsElement.textContent = `Online: ${userCount} users`;
+            }
+        }
+
+        // Add message to chat box
+        function addMessage(data, isOwn = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwn ? 'message-sent' : 'message-received'}`;
+            
+            const nicknameDiv = document.createElement('div');
+            nicknameDiv.className = 'message-nickname';
+            nicknameDiv.textContent = data.nickname || 'Unknown';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = data.text;
+            
+            const timestampDiv = document.createElement('div');
+            timestampDiv.className = 'message-timestamp';
+            
+            // Format timestamp
+            let timestamp = '';
+            if (data.timestamp) {
+                const date = new Date(data.timestamp);
+                timestamp = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            } else {
+                timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+            timestampDiv.textContent = timestamp;
+            
+            messageDiv.appendChild(nicknameDiv);
+            messageDiv.appendChild(textDiv);
+            messageDiv.appendChild(timestampDiv);
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Add system message (join/leave notifications)
+        function addSystemMessage(text, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'system-message';
+            messageDiv.textContent = text;
+            
+            // Optional: different styles for different types
+            if (type === 'join') {
+                messageDiv.style.borderLeftColor = '#28a745';
+                messageDiv.style.backgroundColor = '#d4edda';
+                messageDiv.style.color = '#155724';
+            } else if (type === 'leave') {
+                messageDiv.style.borderLeftColor = '#dc3545';
+                messageDiv.style.backgroundColor = '#f8d7da';
+                messageDiv.style.color = '#721c24';
+            }
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Handle nickname submission
+        nicknameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                setNickname();
             }
         });
 
-        socket.on('chat message', (msg) => {
-            const item = document.createElement('div');
-            item.textContent = msg;
-            item.className = 'message';
-            messages.appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight);
+        function setNickname() {
+            const nickname = nicknameInput.value.trim();
+            if (nickname) {
+                currentNickname = nickname;
+                nicknameInput.disabled = true;
+                nicknameInput.placeholder = nickname; // Show current nickname as placeholder
+                socket.emit('set nickname', nickname);
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Handle message submission
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendButton.disabled) {
+                sendMessage();
+            }
         });
+
+        sendButton.addEventListener('click', sendMessage);
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && !sendButton.disabled) {
+                socket.emit('chat message', message);
+                messageInput.value = '';
+                messageInput.focus();
+            }
+        }
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            statsElement.textContent = 'Connected to server';
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            statsElement.textContent = 'Disconnected from server';
+        });
+
+        socket.on('set nickname', (data) => {
+            // This is handled on the client side now
+        });
+
+        socket.on('init users', (users) => {
+            updateStats(users.length, currentNickname || 'Setting nickname...');
+            // Add system message for each existing user (optional)
+            users.forEach(user => {
+                if (user.id !== socket.id) { // Don't message about ourselves
+                    addSystemMessage(`${user.nickname} is here`, 'info');
+                }
+            });
+        });
+
+        socket.on('user joined', (data) => {
+            updateStats(data.userCount);
+            addSystemMessage(`${data.nickname} joined the chat`, 'join');
+        });
+
+        socket.on('user left', (data) => {
+            updateStats(data.userCount);
+            addSystemMessage(`${data.nickname} left the chat`, 'leave');
+        });
+
+        socket.on('chat message', (data) => {
+            const isOwn = data.userId === socket.id;
+            addMessage(data, isOwn);
+        });
+
+        // Focus on nickname input when page loads
+        nicknameInput.focus();
     </script>
 </body>
 </html>
