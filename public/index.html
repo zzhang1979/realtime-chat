@@ -203,7 +203,18 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        // Debug: Log when socket.io.js loads
+        console.log('Socket.IO client script loading...');
+        
+        const socket = io({
+            // Add some debugging options
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 10000
+        });
+        
+        console.log('Socket.IO client initialized:', socket.io.engine ? 'engine present' : 'no engine');
+        
         const nicknameInput = document.getElementById('nickname-input');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
@@ -219,6 +230,7 @@
             } else {
                 statsElement.textContent = `Online: ${userCount} users`;
             }
+            console.log(`Stats updated: ${userCount} users, nickname: ${nickname || 'none'}`);
         }
 
         // Add message to chat box
@@ -278,17 +290,20 @@
 
         // Handle nickname submission
         nicknameInput.addEventListener('keypress', (e) => {
-        nicknameInput.addEventListener("blur", setNickname);
             if (e.key === 'Enter') {
                 setNickname();
             }
         });
+        
+        nicknameInput.addEventListener('blur', setNickname);
+
         function setNickname() {
             const nickname = nicknameInput.value.trim();
             if (nickname) {
                 currentNickname = nickname;
                 nicknameInput.disabled = true;
                 nicknameInput.placeholder = nickname; // Show current nickname as placeholder
+                console.log('Emitting set nickname:', nickname);
                 socket.emit('set nickname', nickname);
                 sendButton.disabled = false;
                 messageInput.focus();
@@ -296,8 +311,6 @@
             } else {
                 nicknameInput.focus();
                 nicknameInput.placeholder = 'Please enter a nickname';
-            }
-        }
             }
         }
 
@@ -313,28 +326,45 @@
         function sendMessage() {
             const message = messageInput.value.trim();
             if (message && !sendButton.disabled) {
+                console.log('Emitting chat message:', message);
                 socket.emit('chat message', message);
                 messageInput.value = '';
                 messageInput.focus();
             }
         }
 
-        // Socket event handlers
+        // Socket event handlers with debugging
         socket.on('connect', () => {
-            console.log('Connected to server');
+            console.log('Socket connected:', socket.id);
             statsElement.textContent = 'Connected to server';
         });
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            statsElement.textContent = 'Disconnected from server';
+        socket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            statsElement.textContent = 'Disconnected from server: ' + reason;
+        });
+
+        socket.on('connect_error', (error) => {
+            console.log('Connection error:', error);
+            statsElement.textContent = 'Connection error: ' + (error.message || error);
+        });
+
+        socket.on('connect_timeout', () => {
+            console.log('Connection timeout');
+            statsElement.textContent = 'Connection timeout';
+        });
+
+        socket.on('reconnect_attempt', () => {
+            console.log('Reconnection attempt');
         });
 
         socket.on('set nickname', (data) => {
             // This is handled on the client side now
+            console.log('Received set nickname acknowledgment:', data);
         });
 
         socket.on('init users', (users) => {
+            console.log('Received init users:', users.length);
             updateStats(users.length, currentNickname || 'Setting nickname...');
             // Add system message for each existing user (optional)
             users.forEach(user => {
@@ -345,22 +375,34 @@
         });
 
         socket.on('user joined', (data) => {
+            console.log('User joined:', data);
             updateStats(data.userCount);
             addSystemMessage(`${data.nickname} joined the chat`, 'join');
         });
 
         socket.on('user left', (data) => {
+            console.log('User left:', data);
             updateStats(data.userCount);
             addSystemMessage(`${data.nickname} left the chat`, 'leave');
         });
 
         socket.on('chat message', (data) => {
+            console.log('Received chat message:', data);
             const isOwn = data.userId === socket.id;
             addMessage(data, isOwn);
         });
 
+        // Connection lifecycle logging
+        socket.on('connecting', () => {
+            console.log('Connecting to server...');
+            statsElement.textContent = 'Connecting to server...';
+        });
+
         // Focus on nickname input when page loads
         nicknameInput.focus();
+        
+        // Initial log
+        console.log('Client-side initialization complete');
     </script>
 </body>
 </html>
